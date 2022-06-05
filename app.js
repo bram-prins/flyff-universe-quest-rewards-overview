@@ -24,7 +24,7 @@ const checkGameDataVersion = async () => {
     const gameDataVersion = await (await fetch('https://flyff-api.sniegu.fr/version/data')).json();
     if (currentVersion != gameDataVersion) {
         console.debug('Updating webpage')
-        writeHtml(gameDataVersion);
+        await writeHtml(gameDataVersion);
         currentVersion = gameDataVersion;
     }
     console.debug('Game data up to date')
