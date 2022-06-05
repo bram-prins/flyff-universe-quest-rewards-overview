@@ -23,9 +23,11 @@ let currentVersion = '6'
 const checkGameDataVersion = async () => {
     const gameDataVersion = await (await fetch('https://flyff-api.sniegu.fr/version/data')).json();
     if (currentVersion != gameDataVersion) {
+        console.debug('Updating webpage')
         writeHtml(gameDataVersion);
         currentVersion = gameDataVersion;
     }
+    console.debug('Game data up to date')
 }
 
 // Check game data version every night at 1 am
@@ -41,7 +43,6 @@ const reset = () => {
 
     setTimeout(async () => {
         await checkGameDataVersion();
-        console.debug('Game data version up to date; reset')
         reset();
     }, ms);
 }
