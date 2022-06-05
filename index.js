@@ -128,6 +128,8 @@ const htmlTableData = async () => {
         if (quest.type == 'Chain') {
             columns[1] = '<a href="https://flyffipedia.com/quests/details/' + quest.parentId + '" target="_blank">' + quest.parentName + 
                 '</a> - chain that starts at lvl ' + quest.chainStartLvl;
+            if (quest.chainPosition == 0)
+                columns[1] += ' (start quest)'
         }
         columns[2] = '<a href="https://flyffipedia.com/quests/details/' + quest.id + '" target="_blank">' +  quest.name + '</a>';
         columns[3] = quest.minLevel;
