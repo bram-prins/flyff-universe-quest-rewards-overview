@@ -1,4 +1,5 @@
 const fetch = require('node-fetch');
+const path = require('path');
 const fs = require('fs/promises');
 
 const fetchUrl = async (url) => {
@@ -169,7 +170,7 @@ const htmlTableData = async () => {
 // Build index.html
 const writeHtml = async (gameDataVersion) => {
     const tableData = await htmlTableData();
-    await fs.writeLine(__dirname + '/index.html',
+    await fs.writeFile(path.join(__dirname + '/index.html'),
 `<!DOCTYPE html>
 <html>
 <head>
@@ -214,4 +215,5 @@ ${tableData}
 `);
 };
 
+//writeHtml('6')
 module.exports = writeHtml;
