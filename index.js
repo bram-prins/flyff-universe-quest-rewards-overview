@@ -15,6 +15,7 @@ const getAllQuests = async () => {
     for (const questId of allQuestsList) {
         const quest = await fetchUrl('https://flyff-api.sniegu.fr/quest/' + questId);
 
+        // Only add the real quests to the list, not the parents/categories of the quests
         let parentName;
         let grandparentId;
         let grandparentName;
@@ -36,13 +37,15 @@ const getAllQuests = async () => {
             }
         }
     }
-    // await fs.writeFile('quests.json', JSON.stringify(quests));
+    // await fs.writeFile('questsTemp.json', JSON.stringify(quests));
     return quests;
 };
 
 const getQuestsRewards = async () => {
-    const allQuests = (await getAllQuests()).sort((a,b) => a.minLevel - b.minLevel);
+    const allQuests = await getAllQuests();
     // const allQuests = JSON.parse(await fs.readFile('questsTemp.json','utf8'));
+    
+    // First, define the different quest chains. This will help us to sort the quests properly
     const allQuestsRewards = [];
     const chains = [];
 
@@ -60,6 +63,7 @@ const getQuestsRewards = async () => {
         } while (nextQuest)
     }
 
+    // Second, add them all to the new array with the needed properties
     for (const quest of allQuests) {
         let type;
         let chainId;
@@ -74,7 +78,8 @@ const getQuestsRewards = async () => {
         } else {
             type = quest.grandparentName;
         }
-
+        
+        // Only add real item rewards (not the quest items you get from a part of a quest)
         const rewardItems = [];
         if (quest.endReceiveItems != null) {
             for (const rewardItem of quest.endReceiveItems) {
@@ -115,7 +120,8 @@ const getQuestsRewards = async () => {
 const htmlTableData = async () => {
     const allQuestsRewards = await getQuestsRewards();
     
-    const data = []
+    // Create the inner html for all the rows of the html table
+    const htmlData = []
     for (const quest of allQuestsRewards) {
         const columns = [];
         columns[0] = quest.type;
@@ -142,11 +148,12 @@ const htmlTableData = async () => {
         }
         columns[7] = quest.rewardInventorySpaces;
 
-        data.push(columns);
+        htmlData.push(columns);
     }
 
+    // Write the rows as html
     let htmlTableRows = '';
-    for (const row of data) {
+    for (const row of htmlData) {
         htmlTableRows += '<tr>\n';
         for (const column of row) {
             htmlTableRows += '<td>' + (column || '-') + '</td>\n';
@@ -157,6 +164,7 @@ const htmlTableData = async () => {
     return htmlTableRows;
 }
 
+// Build index.html
 const writeHtml = async (gameDataVersion) => {
     const tableData = await htmlTableData();
     await fs.writeLine(__dirname + '/index.html',
