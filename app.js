@@ -3,6 +3,8 @@ const fetch = require('node-fetch');
 const writeHtml = require('./index.js');
 const express = require('express');
 const path = require('path');
+const fs = require('fs/promises');
+
 const app = express();
 app.use(express.json());
 app.use(express.static("express"));
@@ -19,32 +21,14 @@ server.listen(port);
 console.debug('Server listening on port ' + port);
 
 // Get latest game data version and update if needed
-let currentVersion = '6'
-const checkGameDataVersion = async () => {
-    const gameDataVersion = await (await fetch('https://flyff-api.sniegu.fr/version/data')).json();
-    if (currentVersion != gameDataVersion) {
-        console.debug('Updating webpage')
-        await writeHtml(gameDataVersion);
-        currentVersion = gameDataVersion;
+const checkDataVersion = async () => {
+    const currentDataVersion = await fs.readFile(path.join(__dirname + '/dataversion.txt'))
+    const latestDataVersion = await (await fetch('https://flyff-api.sniegu.fr/version/data')).json();
+    if (currentDataVersion != latestDataVersion) {
+        console.debug('Updating webpage');
+        await writeHtml(latestDataVersion);
     }
-    console.debug('Game data up to date')
+    console.debug('Game data up to date');
 }
-
-// Check game data version every night at 1 am
-const reset = () => {
-    const now = new Date();
-    const next = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + 1, // For the next day, ...
-        1, 0, 0 // ...at 01:00:00 hours
-    );
-    const ms = next.getTime() - now.getTime();
-
-    setTimeout(async () => {
-        await checkGameDataVersion();
-        reset();
-    }, ms);
-}
-reset();
+checkDataVersion();
 
