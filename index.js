@@ -12,34 +12,31 @@ const fetchUrl = async (url) => {
 const getAllQuests = async () => {
     const allQuestsList =  await fetchUrl('https://flyff-api.sniegu.fr/quest');
 
-    const quests = [];
+    const allQuests = [];
     for (const questId of allQuestsList) {
         const quest = await fetchUrl('https://flyff-api.sniegu.fr/quest/' + questId);
+        allQuests.push(quest);
+    }
 
-        // Only add the real quests to the list, not the parents/categories of the quests
-        let parentName;
-        let grandparentId;
-        let grandparentName;
+    // Add parent & grandparent properties to the list, to show those in the table too
+    for (const quest of allQuests) {
         if (quest.parent != null) {
-            const parent = await fetchUrl('https://flyff-api.sniegu.fr/quest/' + quest.parent);
-            parentName = parent.name.en;
+            const parent = allQuests.find(q => q.id == quest.parent);
+            const parentName = parent.name.en;
 
             if (parent.parent != null && !['1st Job Change','2nd Job Change','P.K'].includes(parentName)) {
-                const grandparent = await fetchUrl('https://flyff-api.sniegu.fr/quest/' + parent.parent);
-                grandparentId = grandparent.id;
-                grandparentName = grandparent.name.en;
+                const grandparent = allQuests.find(q => q.id == parent.parent);
 
-                quests.push({
-                    ...quest,
-                    parentName,
-                    grandparentId,
-                    grandparentName
-                });
+                quest.parentName = parentName;
+                quest.grandparentId = grandparent.id;
+                quest.grandparentName = grandparent.name.en;
             }
         }
     }
-    // await fs.writeFile('questsTemp.json', JSON.stringify(quests));
-    return quests;
+
+    // Only return the actual quests, not the parents/categories of quests
+    return allQuests.filter(q => q.parentName);
+    // await fs.writeFile('questsTemp.json', JSON.stringify(allQuests.filter(q => !q.parentName)));
 };
 
 const getQuestsRewards = async () => {
@@ -81,11 +78,11 @@ const getQuestsRewards = async () => {
         }
         
         // Only add real item rewards (not the quest items you get from a part of a quest)
-        const rewardItems = [];
+        const rewardItems = []
         if (quest.endReceiveItems != null) {
             for (const rewardItem of quest.endReceiveItems) {
-                const itemInfo = await fetchUrl('https://flyff-api.sniegu.fr/item/' + rewardItem.item);
-                if (itemInfo.category != 'quest' && itemInfo.category != 'blinkwing') {
+                if (!allQuests.find(q => q.endRemoveItems && q.endRemoveItems.find(i => i.item == rewardItem.item))) {
+                    const itemInfo = await fetchUrl('https://flyff-api.sniegu.fr/item/' + rewardItem.item);
                     rewardItems.push({
                         ...rewardItem,
                         name: itemInfo.name.en
@@ -106,7 +103,7 @@ const getQuestsRewards = async () => {
             chainPosition,
             rewardPenya: quest.endReceiveGold,
             rewardExp: quest.endReceiveExperience,
-            rewardItems: rewardItems,
+            rewardItems,
             rewardInventorySpaces: quest.endReceiveInventorySpaces
         });
     }
@@ -134,11 +131,11 @@ const htmlTableData = async () => {
         }
         columns[2] = '<a href="https://flyffipedia.com/quests/details/' + quest.id + '" target="_blank">' +  quest.name + '</a>';
         columns[3] = quest.minLevel;
-        if (quest.rewardExp != null)
+        if (quest.rewardExp)
             columns[4] = quest.rewardExp[quest.minLevel - 1].toString() + '%';
-        if (quest.rewardPenya != null )
+        if (quest.rewardPenya)
             columns[5] = quest.rewardPenya.toLocaleString();
-        if (quest.rewardItems != null) {
+        if (quest.rewardItems) {
             let rewardItemHtml = '';
             quest.rewardItems.forEach((item, i) => {
                 rewardItemHtml += item.count + 'x <a href="https://flyffipedia.com/items/details/' + item.item + '" target="_blank">' + item.name + '</a>';

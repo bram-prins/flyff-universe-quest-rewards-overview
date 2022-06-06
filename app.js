@@ -27,6 +27,7 @@ const checkDataVersion = async () => {
     if (currentDataVersion != latestDataVersion) {
         console.debug('Updating webpage');
         await writeHtml(latestDataVersion);
+        await fs.writeFile(path.join(__dirname + '/dataversion.txt'), latestDataVersion.toString())
     }
     console.debug('Game data up to date');
 }
