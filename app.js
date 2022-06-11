@@ -1,35 +1,33 @@
-const http = require('http');
 const fetch = require('node-fetch');
-const writeHtml = require('./index.js');
+const getQuestRewardsData = require('./questrewards.js');
 const express = require('express');
 const path = require('path');
 const fs = require('fs/promises');
 
-const app = express();
-app.use(express.json());
-app.use(express.static("express"));
-
-// Default URL for website
-app.use('/', (req, res) => {
-    res.sendFile(path.join(__dirname + '/index.html'));
-});
-
-// Open server
-const server = http.createServer(app);
-const port = process.env.PORT || 3000;
-server.listen(port);
-console.debug('Server listening on port ' + port);
-
-// Get latest game data version and update if needed
+// Get latest game data version and update our data if needed
 const checkDataVersion = async () => {
-    const currentDataVersion = await fs.readFile(path.join(__dirname + '/dataversion.txt'))
-    const latestDataVersion = await (await fetch('https://flyff-api.sniegu.fr/version/data')).json();
-    if (currentDataVersion != latestDataVersion) {
+    const currentVersion = await fs.readFile(path.join(__dirname + '/data/dataversion.txt'))
+    const latestVersion = await (await fetch('https://flyff-api.sniegu.fr/version/data')).json();
+    if (currentVersion != latestVersion) {
         console.debug('Updating webpage');
-        await writeHtml(latestDataVersion);
-        await fs.writeFile(path.join(__dirname + '/dataversion.txt'), latestDataVersion.toString())
+        const questRewardsData = await getQuestRewardsData();
+        await fs.writeFile(path.join(__dirname + '/data/questrewards.json'), JSON.stringify(questRewardsData))
+        await fs.writeFile(path.join(__dirname + '/data/dataversion.txt'), latestVersion.toString())
     }
     console.debug('Game data up to date');
 }
-checkDataVersion();
+
+const app = express();
+app.use(express.static('public'));
+app.use('/data', express.static('data'));
+
+const port = process.env.PORT || 3000;
+const startServer = async () => {
+    await checkDataVersion();
+    app.listen(port, () => console.debug('Server started on port ' + port));
+}
+startServer();
+
+
+
 
