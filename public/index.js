@@ -3,7 +3,6 @@ let sortBy = null;
 
 // Append options 1-120 to the level selector
 const lvlSelector = document.querySelector('select');
-console.log(lvlSelector)
 for (const i of Array.from({length: 120}, (_, i) => i + 1)) {
     const option = document.createElement('option');
     option.innerHTML = i.toString();
@@ -11,8 +10,6 @@ for (const i of Array.from({length: 120}, (_, i) => i + 1)) {
 }
 
 const sortQuestRewards = () => {
-    
-    console.log(sortBy)
     if (!sortBy)
         return questRewards;
     else {
@@ -61,8 +58,8 @@ const sortQuestRewards = () => {
                 break;
             case 'items': questRewardsSorted.sort((a,b) => {
                     if (a.items.length && b.items.length) return a.items[0].name.localeCompare(b.items[0].name);
-                    else if (a.items.length) return 1;
-                    else if (b.items.length) return -1;
+                    else if (a.items.length) return -1;
+                    else if (b.items.length) return 1;
                     else return 0;
                 });
                 break;
@@ -103,7 +100,7 @@ const htmlTable = () => {
         row[2] = '<a href="https://flyffipedia.com/quests/details/' + quest.id + '" target="_blank">' +  quest.name + '</a>';
         
         // Start NPC
-        row[3] = '<a href="' + quest.startNpcUrl + '" target="_blank">' + quest.startNpcName + '</a>';
+        row[3] = '<a href="https://flyffipedia.com/npcs/details/' + quest.startNpc + '" target="_blank">' + quest.startNpcName + '</a>';
         
         // Min. lvl
         row[4] = quest.minLevel;

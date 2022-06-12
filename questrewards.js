@@ -91,18 +91,13 @@ const getQuestRewards = async () => {
         }
 
         const startNpcName = (await fetchUrl('https://flyff-api.sniegu.fr/npc/' + quest.beginNPC)).name.en
-
-        // Check if it's possible to link the NPC to Flyff universe wiki
-        let startNpcUrl = 'https://flyff-universe-wiki.com/wiki/' + startNpcName.replace(/\[|\]/g, '').replace(/\s/g, '_');
-        if (!(await fetch(startNpcUrl)).ok)
-            startNpcUrl = 'https://flyffipedia.com/npcs/details/' + quest.beginNPC;
     
         allQuestsRewards.push({
             id: quest.id,
             category: category,
             name: quest.name.en,
+            startNpc: quest.beginNPC,
             startNpcName,
-            startNpcUrl,
             minLevel: quest.minLevel,
             parentId: quest.parent,
             parentName: quest.type == 'chain' ? quest.parentName : '',

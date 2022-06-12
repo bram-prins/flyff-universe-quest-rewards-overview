@@ -20,9 +20,16 @@ body {
     width: 33%;
 }
 
-#information img {
+#information p img {
     max-width: 100px;
     max-height: 69px;
+}
+
+#information p:nth-child(2) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
 }
 
 #information p:last-of-type {
