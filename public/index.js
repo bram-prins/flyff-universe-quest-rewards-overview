@@ -109,8 +109,12 @@ const htmlTable = () => {
         if (quest.exp) {
             row[5] = quest.exp[quest.minLevel - 1].toString() + '%';
             // Exp at selected lvl
-            if (lvlSelector.value != '-')
-                row[6] = (Math.round(quest.exp[lvlSelector.value - 1] * 100) / 100).toString() + '%';
+            if (lvlSelector.value != '-') {
+                if (lvlSelector.value < quest.minLevel)
+                    row[6] = '-'
+                else
+                    row[6] = (Math.round(quest.exp[lvlSelector.value - 1] * 100) / 100).toString() + '%';
+            }
         }
 
         // Penya
