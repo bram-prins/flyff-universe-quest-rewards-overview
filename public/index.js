@@ -171,27 +171,31 @@ const htmlTable = () => {
 
 // At initialization of the page, load the html table
 const init = async () => {
-    const dataVersion = await fetch('/data/dataversion.txt');
-    document.getElementById('data-version').innerHTML = await dataVersion.json();
+    const resDataVersion = await fetch('/data/version');
+    const resQuestRewards = await fetch('/data');
+    if (resDataVersion.ok && resQuestRewards.ok) {
+        document.getElementById('data-version').innerHTML = await resDataVersion.json();
+        questRewards = await resQuestRewards.json();
+        
+        htmlTable()
 
-    const questRewardsJson = await fetch('/data/questrewards.json');
-    questRewards = await questRewardsJson.json();
-    
-    htmlTable()
-
-    for (let i = 0; i < headers.length; i++) {
-        headers[i].onclick = event => {
-            if (event.target.tagName != 'SELECT' && event.target.tagName != 'OPTION') {
-                if (headers[i].id == sortBy)
-                    sortBy = null;
-                else
-                    sortBy = headers[i].id
-                htmlTable();
+        for (let i = 0; i < headers.length; i++) {
+            headers[i].onclick = event => {
+                if (event.target.tagName != 'SELECT' && event.target.tagName != 'OPTION') {
+                    if (headers[i].id == sortBy)
+                        sortBy = null;
+                    else
+                        sortBy = headers[i].id
+                    htmlTable();
+                }
             }
         }
-    }
 
-    lvlSelector.onchange = () => htmlTable();
+        lvlSelector.onchange = () => htmlTable();
+    } else {
+        alert('The application is currently updating the data, choose OK to retry.');
+        init();
+    }
 }
 
 init();
