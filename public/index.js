@@ -90,17 +90,17 @@ const htmlTable = () => {
         
         // Part of
         if (quest.category == 'Chain') {
-            row[1] = '<a href="https://flyffipedia.com/quests/details/' + quest.parentId + '" target="_blank">' + quest.parentName + 
-                '</a> - chain that starts at lvl ' + quest.chainStartLvl;
+            row[1] = '<a href="https://flyffipedia.com/quests/details/' + quest.parentId + '" rel="external nofollow" target="_blank">' + 
+                quest.parentName + '</a> - chain that starts at lvl ' + quest.chainStartLvl;
             if (quest.chainPosition == 0)
                 row[1] += ' (start quest)'
         }
 
         // Quest Name
-        row[2] = '<a href="https://flyffipedia.com/quests/details/' + quest.id + '" target="_blank">' +  quest.name + '</a>';
+        row[2] = '<a href="https://flyffipedia.com/quests/details/' + quest.id + '" rel="external nofollow" target="_blank">' +  quest.name + '</a>';
         
         // Start NPC
-        row[3] = '<a href="https://flyffipedia.com/npcs/details/' + quest.startNpc + '" target="_blank">' + quest.startNpcName + '</a>';
+        row[3] = '<a href="https://flyffipedia.com/npcs/details/' + quest.startNpc + '" rel="external nofollow" target="_blank">' + quest.startNpcName + '</a>';
         
         // Min. lvl
         row[4] = quest.minLevel;
@@ -125,7 +125,8 @@ const htmlTable = () => {
         if (quest.items) {
             let itemHtml = '';
             quest.items.forEach((item, i) => {
-                itemHtml += item.count + 'x <a href="https:\/\/flyffipedia.com/items/details/' + item.item + '" target="_blank">' + item.name + '</a>';
+                itemHtml += item.count + 'x <a href="https:\/\/flyffipedia.com/items/details/' + item.item + 
+                    '" rel="external nofollow" target="_blank">' + item.name + '</a>';
                 if (item.soulLinked)
                     itemHtml += ' (Soul-linked)';
                 if (i < quest.items.length - 1)
