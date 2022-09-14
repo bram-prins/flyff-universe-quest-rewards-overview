@@ -1,9 +1,9 @@
 let questRewards = []
 let sortBy = null;
 
-// Append options 1-120 to the level selector
+// Append options 1-140 to the level selector
 const lvlSelector = document.querySelector('select');
-for (const i of Array.from({length: 120}, (_, i) => i + 1)) {
+for (const i of Array.from({length: 140}, (_, i) => i + 1)) {
     const option = document.createElement('option');
     option.innerHTML = i.toString();
     lvlSelector.appendChild(option);
