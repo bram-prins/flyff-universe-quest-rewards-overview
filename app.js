@@ -32,7 +32,7 @@ app.listen(port, (error) => {
 // Get latest game data version and update our data if needed
 const checkDataVersion = async () => {
     currentVersion = await fs.readFile(path.join(__dirname + '/data/dataversion.txt'));
-    const latestVersion = await (await fetch('https://flyff-api.sniegu.fr/version/data')).json();
+    const latestVersion = await (await fetch('https://api.flyff.com/version/data')).json();
     if (currentVersion != latestVersion) {
         console.debug('Updating data...');
         const questRewardsData = await getQuestRewardsData();

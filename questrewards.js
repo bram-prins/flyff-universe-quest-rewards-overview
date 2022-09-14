@@ -8,11 +8,11 @@ const fetchUrl = async (url) => {
 };
 
 const getAllQuests = async () => {
-    const allQuestsList =  await fetchUrl('https://flyff-api.sniegu.fr/quest');
+    const allQuestsList =  await fetchUrl('https://api.flyff.com/quest');
 
     const allQuests = [];
     for (const questId of allQuestsList) {
-        const quest = await fetchUrl('https://flyff-api.sniegu.fr/quest/' + questId);
+        const quest = await fetchUrl('https://api.flyff.com/quest/' + questId);
         allQuests.push(quest);
     }
 
@@ -81,7 +81,7 @@ const getQuestRewards = async () => {
             for (const item of quest.endReceiveItems) {
                 // Check if the item is collected again in an other quest
                 if (!allQuests.find(q => q.endRemoveItems && q.endRemoveItems.find(i => i.item == item.item))) {
-                    const itemInfo = await fetchUrl('https://flyff-api.sniegu.fr/item/' + item.item);
+                    const itemInfo = await fetchUrl('https://api.flyff.com/item/' + item.item);
                     items.push({
                         ...item,
                         name: itemInfo.name.en
@@ -90,7 +90,7 @@ const getQuestRewards = async () => {
             }
         }
 
-        const startNpcName = (await fetchUrl('https://flyff-api.sniegu.fr/npc/' + quest.beginNPC)).name.en
+        const startNpcName = (await fetchUrl('https://api.flyff.com/npc/' + quest.beginNPC)).name.en
     
         allQuestsRewards.push({
             id: quest.id,
