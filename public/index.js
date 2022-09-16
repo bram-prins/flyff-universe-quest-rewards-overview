@@ -1,13 +1,7 @@
 let questRewards = []
+const headers = document.querySelectorAll('th');
 let sortBy = null;
-
-// Append options 1-140 to the level selector
 const lvlSelector = document.querySelector('select');
-for (const i of Array.from({length: 140}, (_, i) => i + 1)) {
-    const option = document.createElement('option');
-    option.innerHTML = i.toString();
-    lvlSelector.appendChild(option);
-}
 
 const sortQuestRewards = () => {
     if (!sortBy)
@@ -77,9 +71,7 @@ const sortQuestRewards = () => {
     }
 }
 
-const headers = document.querySelectorAll('th');
-
-const htmlTable = () => {
+const buildHtmlTable = () => {
     const htmlRows = [];
 
     for (const quest of sortQuestRewards(sortBy)) {
@@ -169,6 +161,15 @@ const htmlTable = () => {
     }
 }
 
+// Append options 1-140 to the level selector
+const fillLvlSelector = amtOfLvls => {
+    for (const i of Array.from({length: amtOfLvls}, (_, i) => i + 1)) {
+        const option = document.createElement('option');
+        option.innerHTML = i.toString();
+        lvlSelector.appendChild(option);
+    }
+}
+
 
 // At initialization of the page, load the html table
 const init = async () => {
@@ -178,7 +179,8 @@ const init = async () => {
         document.getElementById('data-version').innerHTML = await resDataVersion.json();
         questRewards = await resQuestRewards.json();
         
-        htmlTable()
+        fillLvlSelector(questRewards[0].exp.length)
+        buildHtmlTable()
 
         for (let i = 0; i < headers.length; i++) {
             headers[i].onclick = event => {
@@ -187,12 +189,12 @@ const init = async () => {
                         sortBy = null;
                     else
                         sortBy = headers[i].id
-                    htmlTable();
+                    buildHtmlTable();
                 }
             }
         }
 
-        lvlSelector.onchange = () => htmlTable();
+        lvlSelector.onchange = () => buildHtmlTable();
     } else {
         alert('The application is currently updating the data, choose OK to retry.');
         init();
