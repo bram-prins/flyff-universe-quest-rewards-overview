@@ -188,11 +188,11 @@ const setTheme = dark => {
 const init = async () => {
     themeSwitch.onclick = () => setTheme(!darkTheme);
 
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         darkTheme = true;
         document.body.classList.add("dark");
     }
-    const savedTheme = localStorage.getItem("theme");
     if (savedTheme !== null && savedTheme == "dark") {
         darkTheme = true;
         document.body.classList.add("dark");
