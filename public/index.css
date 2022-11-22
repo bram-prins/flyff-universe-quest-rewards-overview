@@ -1,11 +1,15 @@
 body {
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
     font-size: 100%;
-    background-image: linear-gradient(
-        to bottom,
-        lightgray,
-        white 100px
-    );
+}
+
+body.dark {
+    background: #1e1e1e;
+    color: #fff;
+}
+
+body.dark a {
+    color: #aaa;
 }
 
 #information {
@@ -15,22 +19,72 @@ body {
     justify-content: space-between;
 }
 
-#information * {
+.col {
     width: 33.3%;
+    margin-top: 1em;
+    margin-bottom: 1em;
 }
 
-#information p img {
+#mode {
+    margin: 0;
+    display: flex;
+    flex-direction: row;
+}
+
+#mode * {
+    vertical-align: middle;
+}
+
+#switch {
+    position: relative;
+    margin: 0;
+    height: 20px;
+    width: 36px;
+    border-radius: 10px;
+    margin-left: 8px;
+    margin-right: 8px;
+    background-color:#ccc;
+    cursor: pointer;
+}
+
+#switch-button {
+    height: 14px;
+    width: 14px;
+    border-radius: 50%;
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    background-color: white;
+    -webkit-transition: .3s;
+    transition: .3s;
+}
+
+body.dark #switch-button {
+    -webkit-transform: translateX(16px);
+    -ms-transform: translateX(16px);
+    transform: translateX(16px);
+}
+
+body.dark #switch {
+    background-color: #4e4e4e;
+}
+
+body.dark #switch-button {
+    background-color: #1e1e1e;
+}
+
+.col img {
     max-width: 100px;
     max-height: 69px;
 }
 
-#information p:nth-child(2) {
+.col:nth-child(2) {
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-#information p:last-of-type {
+.col:last-child {
     text-align: end;
 }
 
@@ -40,11 +94,22 @@ table {
     background-color: white;
 }
 
+body.dark table {
+    border: #5e5e5e solid 2px;
+    background: #1e1e1e;
+}
+
 select {
     height: 26px;
     width: 100%;
     font-family: inherit;
     font-size: inherit;
+    border-radius: 5px;
+}
+
+body.dark select {
+    background-color: #1e1e1e;
+    color: white;
 }
 
 th {
@@ -58,5 +123,17 @@ td, th {
 }
 
 tbody tr:nth-child(odd) {
-    background-color: rgb(0,0,0,0.05);
+    background-color: #eeeeee;
+}
+
+body.dark thead tr {
+    background: #2e2e2e;
+}
+
+body.dark tbody tr:nth-child(even) {
+    background: #2e2e2e;
+}
+
+body.dark tbody tr:nth-child(odd) {
+    background: unset;
 }

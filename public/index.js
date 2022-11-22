@@ -2,6 +2,8 @@ let questRewards = []
 const headers = document.querySelectorAll('th');
 let sortBy = null;
 const lvlSelector = document.querySelector('select');
+let darkTheme = false;
+const themeSwitch = document.getElementById('switch');
 
 const sortQuestRewards = () => {
     if (!sortBy)
@@ -170,9 +172,32 @@ const fillLvlSelector = amtOfLvls => {
     }
 }
 
+const setTheme = dark => {
+    darkTheme = !darkTheme;
+    if (dark) {
+        document.body.classList.add("dark");
+        localStorage.setItem("theme", "dark");
+    } else {
+        document.body.classList.remove("dark");
+        localStorage.setItem("theme", "light");
+    }
+}
+
 
 // At initialization of the page, load the html table
 const init = async () => {
+    themeSwitch.onclick = () => setTheme(!darkTheme);
+
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        darkTheme = true;
+        document.body.classList.add("dark");
+    }
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme !== null && savedTheme == "dark") {
+        darkTheme = true;
+        document.body.classList.add("dark");
+    }
+
     const resDataVersion = await fetch('/data/version');
     const resQuestRewards = await fetch('/data');
     if (resDataVersion.ok && resQuestRewards.ok) {
