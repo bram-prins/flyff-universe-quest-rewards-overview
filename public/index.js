@@ -121,6 +121,8 @@ const buildHtmlTable = () => {
             quest.items.forEach((item, i) => {
                 itemHtml += item.count + 'x <a href="https:\/\/flyffipedia.com/items/details/' + item.item + 
                     '" rel="external nofollow" target="_blank">' + item.name + '</a>';
+                if (item.upgradeLevel)
+                    itemHtml += ` +${item.upgradeLevel}`
                 if (item.soulLinked)
                     itemHtml += ' (Soul-linked)';
                 if (i < quest.items.length - 1)
