@@ -19,20 +19,20 @@ const getAllQuests = async () => {
     // Add parent & grandparent properties to the list, to show those in the table too
     for (const quest of allQuests) {
         if (quest.parent != null) {
-            if (quest.type == 'daily') { //temp fix v11
-                quest.parentName = 'Daily'
-                quest.grandparentName = 'Daily'
-                continue
-            }
-
             const parent = allQuests.find(q => q.id == quest.parent);
-            const parentName = parent.name.en;
 
-            if (parent.parent != null && !['1st Job Change','2nd Job Change','P.K'].includes(parentName)) {
+            if (parent != null && parent.parent != null && !['1st Job Change','2nd Job Change','P.K'].includes(parent.name.en)) {
+                quest.parentName = parent.name.en;
+
+                if (parent.parent == 14752) { // temp fix v12
+                    quest.grandparentName = 'Daily'
+                    continue
+                }
+                
                 const grandparent = allQuests.find(q => q.id == parent.parent);
 
-                quest.parentName = parentName;
-                quest.grandparentName = grandparent.name.en;
+                if (grandparent != null)
+                    quest.grandparentName = grandparent.name.en;
             }
         }
     }
