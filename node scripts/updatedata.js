@@ -1,6 +1,12 @@
 import fetch from 'node-fetch';
+import path from 'path';
 import { readFile, writeFile } from 'fs/promises';
 
+/**
+ * Fetches data from flyff API
+ * @param {string} endpoint API endpoint to fetch
+ * @returns {Promise<object>} result object, if successful
+ */
 const fetchEndpoint = async (endpoint) => {
     const baseUrl = 'https://api.flyff.com';
     if (!endpoint.startsWith('/')) {
@@ -12,7 +18,7 @@ const fetchEndpoint = async (endpoint) => {
         await delay;
         const response = await fetch(baseUrl + endpoint);
         if (!response.ok)
-            throw new Error(`${response.status}: ${await response.text()}`);
+            throw new Error(`${response.status}:\n${await response.text()}`);
 
         return await response.json();
     } catch (error) {
@@ -20,16 +26,32 @@ const fetchEndpoint = async (endpoint) => {
     }
 };
 
+/**
+ * Helper function to log progress of a process on the same line
+ * @param {string} message Log line to be updated (such as "Progress: XX%")
+ */
 const updateLog = (message) => {
     process.stdout.clearLine(0); 
     process.stdout.cursorTo(0);  
     process.stdout.write(message); 
 }
 
+/**
+ * Map that stores all quests for later lookup
+ */
 const allQuests = new Map();
 
+/**
+ * Fetches all the quests from the API, stores them in @see allQuests , and returns a filtered array of
+ * the quests based on whether they're relevant for the overview:
+ * - Only doable/base-level quests (so no parents, categories, etc)
+ * - No Job Change, Couple and P.K. quests 
+ * @returns {array} Filtered array with the doable quests
+ */
 const getQuests = async () => {
-    console.log('Fetching quests from API...');
+    console.log('Fetching quests from the API...');
+
+    // 1. Fetch all quests into allQuests
     const allQuestsList =  await fetchEndpoint('/quest');
 
     let i = 0;
@@ -47,10 +69,10 @@ const getQuests = async () => {
     //     allQuests.set(quest.id, quest);
     // }
 
-    // Add parent & grandparent properties to the list, to show those in the table too
     const excludeParents = ['1st Job Change', '2nd Job Change', '3rd Job Change', 'Couple Daily Quests', 'P.K'];
     const doableQuests = [];
     for (const quest of allQuests.values()) {
+        // Filter out the non-doable quests (parents, categories, etc.) based on whether they have a start NPC
         if (!quest.beginNPC)
             continue;
 
@@ -58,9 +80,12 @@ const getQuests = async () => {
             continue;
 
         const parent = allQuests.get(quest.parent);
+
+        // Filter out Job Change, Couple and P.K. quests
         if (parent == null || parent.parent == null || excludeParents.includes(parent.name.en))
             continue;
 
+        // Add parentName & grandparentName properties to the quests, to be used/shown later
         quest.parentName = parent.name.en;
         const grandparent = allQuests.get(parent.parent);
         if (grandparent != null) {
@@ -73,9 +98,16 @@ const getQuests = async () => {
     return doableQuests;
 };
 
+/**
+ * Gets an array of arrays with all chain quests ordered
+ * @param {array} quests All quests from @see getQuests
+ * @param {array} warnings The array of warnings to add messages to if necessary, to be logged at the end of the script
+ * @returns {array} An array of arrays with all the chain quest ID's in order
+ */
 const mapChains = (quests, warnings) => {
     const chains = [];
 
+    // Recursive function to find the next quest of each quest
     const mapChain = (chain, previousQuestId) => {
         chain.push(previousQuestId);
 
@@ -103,7 +135,8 @@ const mapChains = (quests, warnings) => {
         }
     };
 
-    // Faulty API data: some chain quests have type 'category' 
+    // First find all the start quests of chains (that don't have a preceding quest), and start mapping from there
+    // Note: some chain quests have type 'category' instead of 'chain' (faulty API data)
     const startQuests = quests.filter(q => (q.type == 'chain' || q.type == 'category') && (!q.beginQuests || q.beginQuests.length == 0));
     for (const startQuest of startQuests) {
         if (chains.find(c => c.includes(startQuest.id)))
@@ -113,6 +146,7 @@ const mapChains = (quests, warnings) => {
         mapChain(chain, startQuest.id);
         if (chain.length > 1) {
             chain.forEach(questId => {
+                // Correct the aforementioned faulty type if necessary
                 const quest = allQuests.get(questId);
                 if (quest.type == 'category') {
                     warnings.push('Quest ' + questId + ' has type "category" but is a "chain" quest');
@@ -126,10 +160,15 @@ const mapChains = (quests, warnings) => {
     return chains;
 }
 
+/**
+ * Maps all the quests from @see getQuests to the format for the overview, by adding some properties,
+ * and sorts them by level but with the quest chains grouped
+ * @returns {array} The formatted and sorted quests for the overview (to write to ../data/quests.json)
+ */
 const mapQuests = async () => {
     const quests = await getQuests();
     
-    console.log('Mapping data and fetching item and NPC info from API...');
+    console.log('Fetching item and NPC info from the API and mapping the quest data...');
     const mapped = [];
     const warnings = [];
 
@@ -146,6 +185,8 @@ const mapQuests = async () => {
             let chainId;
             let chainPosition;
             let chainStartLvl;
+
+            // Use type or grandparentName as the Category, which are clearer than the category from the API
             if (quest.type == 'chain') {
                 category = 'Chain'
                 chain = chains.find(c => c.includes(quest.id))
@@ -162,6 +203,7 @@ const mapQuests = async () => {
                 category = quest.grandparentName;
             }
             
+            // Map item rewards:
             // Only add real item rewards (not the quest items that you have to hand in for a next quest)
             const items = []
             let endReceiveItems = quest.endReceiveItems ?? [];
@@ -188,6 +230,7 @@ const mapQuests = async () => {
                 items.push(cachedItems.get(item.item));
             }
 
+            // Get the start NPC name
             let startNpcName;
             if (!cachedNpcs.has(quest.beginNPC)) {
                 try {
@@ -231,11 +274,13 @@ const mapQuests = async () => {
         }
     }
 
+    // Log problems that were encountered during the fetching or mapping of the quests
     process.stdout.write("\n"); 
     for (const warning of warnings) {
         console.warn('Warning: ' + warning);
     }
 
+    // Sort the quests by level, but with chain quests grouped
     return mapped.sort((a,b) => {
         const aLvl = a.chainStartLvl ? a.chainStartLvl : a.minLevel;
         const bLvl = b.chainStartLvl ? b.chainStartLvl : b.minLevel;
@@ -243,8 +288,15 @@ const mapQuests = async () => {
     })
 }
 
-export default mapQuests
+// Write the results to ../data/quests.json
+const result = mapQuests();
+await writeFile(
+    path.join(import.meta.dirname, '..', 'data', 'quests.json'), 
+    JSON.stringify(result));
+console.log("Data sucessfully written to quests.json");
 
-
-
-
+const latestVersion = await fetchEndpoint('/version/data');
+await writeFile(
+    path.join(import.meta.dirname, '..', 'data', 'version.txt'), 
+    latestVersion.toString());
+console.log("Latest version written to version.txt");

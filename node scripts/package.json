@@ -2,10 +2,9 @@
   "name": "flyff-universe-quest-rewards-overview",
   "type": "module",
   "scripts": {
-    "start": "node app.js"
+    "start": "node checkversion.js"
   },
   "dependencies": {
-    "express": "^5.2.1",
     "node-fetch": "^3.3.2"
   }
 }
