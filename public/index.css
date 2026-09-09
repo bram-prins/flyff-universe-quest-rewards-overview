@@ -101,8 +101,7 @@ body.dark table {
 
 select {
     height: 26px;
-    width: 100%;
-    max-width: 64px;
+    width: 64px;
     font-family: inherit;
     font-size: inherit;
     border-radius: 5px;
@@ -121,6 +120,10 @@ td, th {
     border: 1px solid black;
     text-align: left;
     padding: 8px;
+}
+
+th#exp-min-lvl, th#exp-selected-lvl {
+    white-space: nowrap;
 }
 
 tbody tr:nth-child(odd) {

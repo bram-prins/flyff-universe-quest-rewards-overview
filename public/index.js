@@ -24,7 +24,9 @@ const sortQuests = () => {
         const questsSorted = [...quests]
 
         switch (sortBy) {
-            case 'category': questsSorted.sort((a,b) => a.category.localeCompare(b.category)); break;
+            case 'category': 
+                questsSorted.sort((a,b) => a.category.localeCompare(b.category)); 
+                break;
             case 'part-of': 
                 questsSorted.sort((a,b) => {
                     if (a.chainStartLvl && b.chainStartLvl) return a.chainStartLvl - b.chainStartLvl;
@@ -33,11 +35,15 @@ const sortQuests = () => {
                     else return 0;
                 });
                 break;
-            case 'quest-name': questsSorted.sort((a,b) => a.name.localeCompare(b.name)); break;
+            case 'quest-name': 
+                questsSorted.sort((a,b) => a.name.localeCompare(b.name)); 
+                break;
             case 'start-npc': 
                 questsSorted.sort((a,b) => a.startNpcName.replace(/\[|\]/g, '').localeCompare(b.startNpcName.replace(/\[|\]/g, '')));
                 break;
-            case 'min-lvl': questsSorted.sort((a,b) => a.minLevel - b.minLevel); break;
+            case 'min-lvl': 
+                questsSorted.sort((a,b) => a.minLevel - b.minLevel); 
+                break;
             case 'exp-min-lvl': 
                 questsSorted.sort((a,b) => {
                     if (a.exp && b.exp) return b.exp[b.minLevel - 1] - a.exp[a.minLevel - 1];
@@ -64,19 +70,25 @@ const sortQuests = () => {
                     else return 0;
                 }); 
                 break;
-            case 'items': questsSorted.sort((a,b) => {
+            case 'items': 
+                questsSorted.sort((a,b) => {
                     if (a.items.length && b.items.length) return a.items[0].name.localeCompare(b.items[0].name);
                     else if (a.items.length) return -1;
                     else if (b.items.length) return 1;
                     else return 0;
                 });
                 break;
-            case 'inventory-slots': questsSorted.sort((a,b) => {
+            case 'inventory-slots': 
+                questsSorted.sort((a,b) => {
                     if (a.inventorySlots && b.inventorySlots) return b.inventorySlots - a.inventorySlots;
                     else if (a.inventorySlots) return -1;
                     else if (b.inventorySlots) return 1
                     else return 0;
                 });
+                break;
+            case 'completed': 
+                const completedQuestIds = getCompletedQuestIds();
+                questsSorted.sort((a,b) => Number(completedQuestIds.includes(b.id)) - Number(completedQuestIds.includes(a.id)));
                 break;
             default: break;
         }
@@ -98,7 +110,7 @@ const buildHtmlTable = () => {
         // Part of
         if (quest.category == 'Chain') {
             row[1] = '<a href="https://flyffipedia.com/quests/details/' + quest.parentId + '" rel="external nofollow" target="_blank">' + 
-                quest.parentName + '</a> - chain that starts at lvl ' + quest.chainStartLvl;
+                quest.parentName + '</a> - chain from lvl ' + quest.chainStartLvl;
             if (quest.chainPosition == 0)
                 row[1] += ' (start quest)'
         }
@@ -148,7 +160,7 @@ const buildHtmlTable = () => {
         row[9] = quest.inventorySlots;
 
         // Completed checkbox
-        if (!quest.repeatable) {
+        if (!quest.repeatable && quest.category != 'Daily') {
             const isCompleted = completedQuestIds.includes(quest.id);
             row[10] = `<input type="checkbox" class="completed-checkbox" data-id="${quest.id}" ${isCompleted ? 'checked' : ''}>`;
         } else {

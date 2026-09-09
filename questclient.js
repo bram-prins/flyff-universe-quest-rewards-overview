@@ -1,14 +1,22 @@
 import fetch from 'node-fetch';
 import { readFile, writeFile } from 'fs/promises';
 
-const fetchUrl = async (url) => {
+const fetchEndpoint = async (endpoint) => {
+    const baseUrl = 'https://api.flyff.com';
+    if (!endpoint.startsWith('/')) {
+        endpoint = '/' + endpoint;
+    }
+
     try {
         const delay = new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay per request to not overload API
         await delay;
-        const response = await fetch(url);
+        const response = await fetch(baseUrl + endpoint);
+        if (!response.ok)
+            throw new Error(`${response.status}: ${await response.text()}`);
+
         return await response.json();
     } catch (error) {
-        throw new Error('Error fetching ' + url + ': ' + error);
+        throw new Error(`Error fetching ${endpoint}: ${error.message}`);
     }
 };
 
@@ -22,25 +30,25 @@ const allQuests = new Map();
 
 const getQuests = async () => {
     console.log('Fetching quests from API...');
-    const allQuestsList =  await fetchUrl('https://api.flyff.com/quest');
+    const allQuestsList =  await fetchEndpoint('/quest');
 
     let i = 0;
     for (const questId of allQuestsList) {
-        const quest = await fetchUrl('https://api.flyff.com/quest/' + questId);
+        const quest = await fetchEndpoint('/quest/' + questId);
         allQuests.set(quest.id, quest);
         i++;
         updateLog('Progress: ' + ((i / allQuestsList.length * 100).toFixed(2)) + '%');
     }
     process.stdout.write("\n"); 
 
-    // writeFile('questsTemp.json', JSON.stringify(Array.from(allQuests.values())));    
-    // const questsTemp = await readFile('questsTemp.json', 'utf-8');
+    // writeFile('temp/questsTemp.json', JSON.stringify(Array.from(allQuests.values())));    
+    // const questsTemp = await readFile('temp/questsTemp.json', 'utf-8');
     // for (const quest of JSON.parse(questsTemp)) {
     //     allQuests.set(quest.id, quest);
     // }
 
     // Add parent & grandparent properties to the list, to show those in the table too
-    const excludeParents = ['1st Job Change', '2nd Job Change', '3rd Job Change ', 'Couple Daily Quests', 'P.K'];
+    const excludeParents = ['1st Job Change', '2nd Job Change', '3rd Job Change', 'Couple Daily Quests', 'P.K'];
     const doableQuests = [];
     for (const quest of allQuests.values()) {
         if (!quest.beginNPC)
@@ -65,14 +73,7 @@ const getQuests = async () => {
     return doableQuests;
 };
 
-const mapQuests = async () => {
-    const quests = await getQuests();
-    
-    console.log('Mapping data...');
-    const mapped = [];
-    const warnings = [];
-
-    // First, define the different quest chains. This will help us to sort the quests properly
+const mapChains = (quests, warnings) => {
     const chains = [];
 
     const mapChain = (chain, previousQuestId) => {
@@ -80,31 +81,62 @@ const mapQuests = async () => {
 
         const nextQuests = quests
             .filter(q => q.beginQuests && q.beginQuests.find(bq => bq.quest == previousQuestId))
+            .sort((a, b) => {
+                // If multiple next quests, sort them as follows
+                const aNextQuestMinLevel = quests.find(q => q.beginQuests && q.beginQuests.find(bq => bq.quest == a.id))?.minLevel;
+                const bNextQuestMinLevel = quests.find(q => q.beginQuests && q.beginQuests.find(bq => bq.quest == b.id))?.minLevel;
+                if (bNextQuestMinLevel && !aNextQuestMinLevel) return -1;
+                if (aNextQuestMinLevel && !bNextQuestMinLevel) return 1;
+                return a.minLevel - b.minLevel || aNextQuestMinLevel - bNextQuestMinLevel
+            })
             .map(q => q.id);
 
         if (nextQuests.length == 0)
             return;
+
+        if (nextQuests.length > 1) {
+            warnings.push(`Quest ${previousQuestId} has multiple following quests: ${nextQuests.join(', ')}`);
+        }
 
         for (const nextQuestId of nextQuests) {
             mapChain(chain, nextQuestId);
         }
     };
 
-    const startQuests = quests.filter(q => 
-        (q.type == 'chain' || q.type == 'category') &&      // Some API quest data is faulty and some chain have type 'category' 
-        (!q.beginQuests || q.beginQuests.length == 0 || q.beginQuests.every(bq => allQuests.get(bq.quest)?.parent != q.parent)));
+    // Faulty API data: some chain quests have type 'category' 
+    const startQuests = quests.filter(q => (q.type == 'chain' || q.type == 'category') && (!q.beginQuests || q.beginQuests.length == 0));
     for (const startQuest of startQuests) {
         if (chains.find(c => c.includes(startQuest.id)))
             continue;
 
         const chain = [];
         mapChain(chain, startQuest.id);
-        chains.push(chain);
+        if (chain.length > 1) {
+            chain.forEach(questId => {
+                const quest = allQuests.get(questId);
+                if (quest.type == 'category') {
+                    warnings.push('Quest ' + questId + ' has type "category" but is a "chain" quest');
+                    quest.type = 'chain';
+                }
+            })
+            chains.push(chain)
+        }
     }
 
-    // Second, add them all to the new array with the needed properties
-    const itemCache = new Map();
-    const npcCache = new Map();
+    return chains;
+}
+
+const mapQuests = async () => {
+    const quests = await getQuests();
+    
+    console.log('Mapping data and fetching item and NPC info from API...');
+    const mapped = [];
+    const warnings = [];
+
+    const chains = mapChains(quests, warnings);
+
+    const cachedItems = new Map();
+    const cachedNpcs = new Map();
 
     let i = 0;
     for (const quest of quests) {
@@ -117,12 +149,13 @@ const mapQuests = async () => {
             if (quest.type == 'chain') {
                 category = 'Chain'
                 chain = chains.find(c => c.includes(quest.id))
-                if (!chain)
-                    throw new Error('Quest ' + quest.id + ' is a chain quest but is not part of any chain');
-
-                chainId = chains.indexOf(chain);
-                chainPosition = chain.indexOf(quest.id);
-                chainStartLvl = allQuests.get(chain[0]).minLevel;
+                if (!chain) {
+                    warnings.push('Quest ' + quest.id + ' is a chain quest but is not part of any chain');
+                } else {
+                    chainId = chains.indexOf(chain);
+                    chainPosition = chain.lastIndexOf(quest.id);
+                    chainStartLvl = allQuests.get(chain[0]).minLevel;
+                }
             } else if (quest.type == 'daily') {
                 category = 'Daily';
             } else {
@@ -133,48 +166,47 @@ const mapQuests = async () => {
             const items = []
             let endReceiveItems = quest.endReceiveItems ?? [];
             if (chain && chainPosition < chain.length - 1) {
-                const nextQuestId = chain[chainPosition + 1];
-                const nextQuest = allQuests.get(nextQuestId);
-                endReceiveItems = endReceiveItems.filter(item => !nextQuest.endRemoveItems || !nextQuest.endRemoveItems.find(temp => item.item == temp.item));
+                const followingQuests = chain.slice(chainPosition).map(id => allQuests.get(id));
+                endReceiveItems = endReceiveItems.filter(item => 
+                    !followingQuests.find(q => q.endRemoveItems && q.endRemoveItems.find(temp => item.item == temp.item)));
             }
             for (const item of endReceiveItems) {
-                if (!itemCache.has(item.item)) {
+                if (!cachedItems.has(item.item)) {
                     try {
-                        const itemInfo = await fetchUrl('https://api.flyff.com/item/' + item.item);
+                        const itemInfo = await fetchEndpoint('/item/' + item.item);
                         item.name = itemInfo.name.en;
                     } catch (error) {
                         item.name = '?';
-                        warnings.push('Error mapping quest ' + quest.id + ': Error fetching item info for item ' + item.item + ': ' + error);
+                        warnings.push(`Error fetching item info for item ${item.item}: ${error} (Quest id: ${quest.id})`);
                     }
 
-                    itemCache.set(item.item, item);
+                    cachedItems.set(item.item, item);
                 } else {
-                    item.name = itemCache.get(item.item).name;
+                    item.name = cachedItems.get(item.item).name;
                 }
                 
-                items.push(itemCache.get(item.item));
+                items.push(cachedItems.get(item.item));
             }
 
             let startNpcName;
-            if (!npcCache.has(quest.beginNPC)) {
+            if (!cachedNpcs.has(quest.beginNPC)) {
                 try {
-                    const startNpcInfo = await fetchUrl('https://api.flyff.com/npc/' + quest.beginNPC);
+                    const startNpcInfo = await fetchEndpoint('/npc/' + quest.beginNPC);
                     startNpcName = startNpcInfo.name.en;
-
                 }
                 catch (error) {
-                    warnings.push('Error mapping quest ' + quest.id + ': Error fetching NPC info for NPC ' + quest.beginNPC + ': ' + error);
+                    warnings.push(`Error fetching NPC info for NPC ${quest.beginNPC}: ${error} (Quest id: ${quest.id})`);
                     startNpcName = '?';
                 }
 
-                npcCache.set(quest.beginNPC, startNpcName);
+                cachedNpcs.set(quest.beginNPC, startNpcName);
             } else {
-                startNpcName = npcCache.get(quest.beginNPC);
+                startNpcName = cachedNpcs.get(quest.beginNPC);
             }
 
             mapped.push({
                 id: quest.id,
-                category: category,
+                category,
                 name: quest.name && quest.name.en ? quest.name.en : '?',
                 startNpc: quest.beginNPC,
                 startNpcName,
