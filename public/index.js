@@ -1,33 +1,45 @@
-let questRewards = []
+let quests = []
 const headers = document.querySelectorAll('th');
 let sortBy = null;
 const lvlSelector = document.querySelector('select');
 let darkTheme = false;
 const themeSwitch = document.getElementById('switch');
+const completedQuestsStorageKey = 'completedQuests';
 
-const sortQuestRewards = () => {
+const getCompletedQuestIds = () => {
+    const savedQuests = localStorage.getItem(completedQuestsStorageKey);
+    if (!savedQuests)
+        return [];
+
+    const completedQuestIds = JSON.parse(savedQuests);
+    return Array.isArray(completedQuestIds) ? completedQuestIds : [];
+}
+
+const saveCompletedQuestIds = completedQuestIds => localStorage.setItem(completedQuestsStorageKey, JSON.stringify(completedQuestIds));
+
+const sortQuests = () => {
     if (!sortBy)
-        return questRewards;
+        return quests;
     else {
-        const questRewardsSorted = [...questRewards]
+        const questsSorted = [...quests]
 
         switch (sortBy) {
-            case 'category': questRewardsSorted.sort((a,b) => a.category.localeCompare(b.category)); break;
+            case 'category': questsSorted.sort((a,b) => a.category.localeCompare(b.category)); break;
             case 'part-of': 
-                questRewardsSorted.sort((a,b) => {
+                questsSorted.sort((a,b) => {
                     if (a.chainStartLvl && b.chainStartLvl) return a.chainStartLvl - b.chainStartLvl;
                     else if (a.chainStartLvl) return -1;
                     else if (b.chainStartLvl) return 1;
                     else return 0;
                 });
                 break;
-            case 'quest-name': questRewardsSorted.sort((a,b) => a.name.localeCompare(b.name)); break;
+            case 'quest-name': questsSorted.sort((a,b) => a.name.localeCompare(b.name)); break;
             case 'start-npc': 
-                questRewardsSorted.sort((a,b) => a.startNpcName.replace(/\[|\]/g, '').localeCompare(b.startNpcName.replace(/\[|\]/g, '')));
+                questsSorted.sort((a,b) => a.startNpcName.replace(/\[|\]/g, '').localeCompare(b.startNpcName.replace(/\[|\]/g, '')));
                 break;
-            case 'min-lvl': questRewardsSorted.sort((a,b) => a.minLevel - b.minLevel); break;
+            case 'min-lvl': questsSorted.sort((a,b) => a.minLevel - b.minLevel); break;
             case 'exp-min-lvl': 
-                questRewardsSorted.sort((a,b) => {
+                questsSorted.sort((a,b) => {
                     if (a.exp && b.exp) return b.exp[b.minLevel - 1] - a.exp[a.minLevel - 1];
                     else if (a.exp) return -1;
                     else if (b.exp) return 1;
@@ -36,7 +48,7 @@ const sortQuestRewards = () => {
                 break;
             case 'exp-selected-lvl':
                 if (lvlSelector.value != '-') {
-                    questRewardsSorted.sort((a,b) => {
+                    questsSorted.sort((a,b) => {
                         if (a.exp && b.exp) return b.exp[lvlSelector.value - 1] - a.exp[lvlSelector.value - 1]
                         else if (a.exp) return -1;
                         else if (b.exp) return 1;
@@ -45,21 +57,21 @@ const sortQuestRewards = () => {
                 }
                 break;
             case 'penya': 
-                questRewardsSorted.sort((a,b) => {
+                questsSorted.sort((a,b) => {
                     if (a.penya && b.penya) return b.penya - a.penya;
                     else if (a.penya) return -1;
                     else if (b.penya) return 1;
                     else return 0;
                 }); 
                 break;
-            case 'items': questRewardsSorted.sort((a,b) => {
+            case 'items': questsSorted.sort((a,b) => {
                     if (a.items.length && b.items.length) return a.items[0].name.localeCompare(b.items[0].name);
                     else if (a.items.length) return -1;
                     else if (b.items.length) return 1;
                     else return 0;
                 });
                 break;
-            case 'inventory-slots': questRewardsSorted.sort((a,b) => {
+            case 'inventory-slots': questsSorted.sort((a,b) => {
                     if (a.inventorySlots && b.inventorySlots) return b.inventorySlots - a.inventorySlots;
                     else if (a.inventorySlots) return -1;
                     else if (b.inventorySlots) return 1
@@ -69,14 +81,15 @@ const sortQuestRewards = () => {
             default: break;
         }
     
-        return questRewardsSorted;
+        return questsSorted;
     }
 }
 
 const buildHtmlTable = () => {
     const htmlRows = [];
+    const completedQuestIds = getCompletedQuestIds();
 
-    for (const quest of sortQuestRewards(sortBy)) {
+    for (const quest of sortQuests(sortBy)) {
         const row = [];
         
         // Category
@@ -133,7 +146,15 @@ const buildHtmlTable = () => {
 
         // Inventory slots
         row[9] = quest.inventorySlots;
-    
+
+        // Completed checkbox
+        if (!quest.repeatable) {
+            const isCompleted = completedQuestIds.includes(quest.id);
+            row[10] = `<input type="checkbox" class="completed-checkbox" data-id="${quest.id}" ${isCompleted ? 'checked' : ''}>`;
+        } else {
+            row[10] = '-';
+        }
+
         htmlRows.push(row);
     }
 
@@ -149,6 +170,21 @@ const buildHtmlTable = () => {
 
     // Append the html to table body
     document.querySelector('tbody').innerHTML = html;
+
+    document.querySelectorAll('.completed-checkbox').forEach(checkbox => {
+        checkbox.onchange = event => {
+            const questId = Number(event.target.dataset.id);
+            const completedQuestIds = getCompletedQuestIds();
+            const questIndex = completedQuestIds.indexOf(questId);
+
+            if (event.target.checked && questIndex === -1)
+                completedQuestIds.push(questId);
+            else if (!event.target.checked && questIndex !== -1)
+                completedQuestIds.splice(questIndex, 1);
+
+            saveCompletedQuestIds(completedQuestIds);
+        }
+    });
 
     // Set the color of this column to lightblue, to indicate the sort
     let header;
@@ -201,12 +237,12 @@ const init = async () => {
     }
 
     const resDataVersion = await fetch('/data/version');
-    const resQuestRewards = await fetch('/data');
-    if (resDataVersion.ok && resQuestRewards.ok) {
+    const resQuests = await fetch('/data');
+    if (resDataVersion.ok && resQuests.ok) {
         document.getElementById('data-version').innerHTML = await resDataVersion.json();
-        questRewards = await resQuestRewards.json();
+        quests = await resQuests.json();
         
-        fillLvlSelector(questRewards[0].exp.length)
+        fillLvlSelector(quests[0].exp.length)
         buildHtmlTable()
 
         for (let i = 0; i < headers.length; i++) {

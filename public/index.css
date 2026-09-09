@@ -14,7 +14,7 @@ body.dark a {
 
 #information {
     width: 98%;
-    margin: 0 1% 20px 1%;
+    margin: 0 1% 1em 1%;
     display: flex;
     justify-content: space-between;
 }
@@ -102,6 +102,7 @@ body.dark table {
 select {
     height: 26px;
     width: 100%;
+    max-width: 64px;
     font-family: inherit;
     font-size: inherit;
     border-radius: 5px;

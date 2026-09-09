@@ -1,22 +1,27 @@
-const fetch = require('node-fetch');
-const getQuestRewardsData = require('./questrewards.js');
-const express = require('express');
-const path = require('path');
-const fs = require('fs/promises');
+import fetch from 'node-fetch';
+import getQuestData from './questclient.js';
+import express from 'express';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+import { readFile, writeFile } from 'fs/promises';
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.use(express.static('public'));
+
 let currentVersion = null;
-let updating = false;
+let latestVersion = null;
 app.use('/data/version', (req, res) => {
     if (currentVersion)
         res.send(currentVersion.toString());
     else
         res.sendStatus(503); // Unavailable
 });
+
+let updating = false;
 app.use('/data', (req, res) => {
     if (!updating)
-        res.sendFile(path.join(__dirname + '/data/questrewards.json'));
+        res.sendFile(join(__dirname + '/data/quests.json'));
     else
         res.sendStatus(503);
 });
@@ -31,15 +36,28 @@ app.listen(port, (error) => {
 
 // Get latest game data version and update our data if needed
 const checkDataVersion = async () => {
-    currentVersion = await fs.readFile(path.join(__dirname + '/data/dataversion.txt'));
-    const latestVersion = await (await fetch('https://api.flyff.com/version/data')).json();
+    try {
+        currentVersion = await readFile(join(__dirname + '/data/version.txt'));
+    } catch (error) {
+        console.warn('No current version found.');
+    }
+
+    try {
+        const response  = await fetch('https://api.flyff.com/version/data');
+        latestVersion = await response.json();
+    } catch (error) {
+        if (currentVersion == null) {
+            throw new Error('Error fetching latest data version, and no existing data version exists. ' + error);
+        }
+    }
+    
     if (currentVersion != latestVersion) {
         console.debug('Updating data...');
-        const questRewardsData = await getQuestRewardsData();
+        const questRewardsData = await getQuestData();
         // Write the data to our local file; temporarily set updating to true so that a 503 is returned when the webpage tries to access it
         updating = true;
-        await fs.writeFile(path.join(__dirname + '/data/questrewards.json'), JSON.stringify(questRewardsData));
-        await fs.writeFile(path.join(__dirname + '/data/dataversion.txt'), latestVersion.toString());
+        await writeFile(join(__dirname + '/data/quests.json'), JSON.stringify(questRewardsData));
+        await writeFile(join(__dirname + '/data/version.txt'), latestVersion.toString());
         currentVersion = latestVersion;
         updating = false;
     }
