@@ -9,21 +9,22 @@ import { readFile, writeFile } from 'fs/promises';
  */
 const fetchEndpoint = async (endpoint) => {
     const baseUrl = 'https://api.flyff.com';
-    if (!endpoint.startsWith('/')) {
-        endpoint = '/' + endpoint;
+    const url = baseUrl + (endpoint.startsWith('/') ? endpoint : '/' + endpoint);
+
+    const delay = new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay per request to not overload API
+    await delay;
+    const response = await fetch(url);
+    if (!response.ok) {
+        const err = { requestUrl: url, status: response.status }
+        try {
+            const json = await response.json();
+            err.message = json.message ?? json.error ?? '';
+        } catch {} // ignore
+        
+        throw new Error(JSON.stringify(err, null, 2))
     }
 
-    try {
-        const delay = new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay per request to not overload API
-        await delay;
-        const response = await fetch(baseUrl + endpoint);
-        if (!response.ok)
-            throw new Error(`${response.status}:\n${await response.text()}`);
-
-        return await response.json();
-    } catch (error) {
-        throw new Error(`Error fetching ${endpoint}: ${error.message}`);
-    }
+    return await response.json();;
 };
 
 /**
@@ -218,16 +219,15 @@ const mapQuests = async () => {
                         const itemInfo = await fetchEndpoint('/item/' + item.item);
                         item.name = itemInfo.name.en;
                     } catch (error) {
+                        warnings.push(`Error fetching item info for item ${item.item} (Quest id: ${quest.id}):\n${error.message}`);
                         item.name = '?';
-                        warnings.push(`Error fetching item info for item ${item.item}: ${error} (Quest id: ${quest.id})`);
                     }
-
-                    cachedItems.set(item.item, item);
+                    cachedItems.set(item.item, item.name);
                 } else {
-                    item.name = cachedItems.get(item.item).name;
+                    item.name = cachedItems.get(item.item);
                 }
                 
-                items.push(cachedItems.get(item.item));
+                items.push(item);
             }
 
             // Get the start NPC name
@@ -238,10 +238,9 @@ const mapQuests = async () => {
                     startNpcName = startNpcInfo.name.en;
                 }
                 catch (error) {
-                    warnings.push(`Error fetching NPC info for NPC ${quest.beginNPC}: ${error} (Quest id: ${quest.id})`);
+                    warnings.push(`Error fetching NPC info for NPC ${quest.beginNPC} (Quest id: ${quest.id}):\n${error.message} `);
                     startNpcName = '?';
                 }
-
                 cachedNpcs.set(quest.beginNPC, startNpcName);
             } else {
                 startNpcName = cachedNpcs.get(quest.beginNPC);
@@ -269,7 +268,7 @@ const mapQuests = async () => {
             i++;
             updateLog('Progress: ' + ((i / quests.length * 100).toFixed(2)) + '%');
         } catch (error) {
-            error.message = 'Error processing quest ' + quest.id + ': ' + error.message;
+            error.message = `Error processing quest ${quest.id}:\n${error.message}`;
             throw error;
         }
     }
@@ -289,7 +288,7 @@ const mapQuests = async () => {
 }
 
 // Write the results to ../data/quests.json
-const result = mapQuests();
+const result = await mapQuests();
 await writeFile(
     path.join(import.meta.dirname, '..', 'data', 'quests.json'), 
     JSON.stringify(result));

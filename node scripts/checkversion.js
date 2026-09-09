@@ -6,7 +6,7 @@ let currentVersion = 0;
 try {
     currentVersion = await readFile(path.join(import.meta.dirname, '..', 'data', 'version.txt'));
     console.log('Current version: ' + currentVersion);
-} catch (error) {
+} catch {
     console.log('No current version found.');
 }
 
@@ -21,5 +21,5 @@ console.log('Latest version: ' + latestVersion);
 if (currentVersion == latestVersion) {
     console.log('Game data is up to date');
 } else {
-    console.log('Update available. Run updatedata.js to update the data');
+    console.log('Update available. Run "node updatedata.js" to update the data');
 }
