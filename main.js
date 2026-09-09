@@ -16,12 +16,12 @@ async function init() {
  * Gets the data from the data folder
  */
 async function initData() {
-    const dataVersionResponse = await fetch('../data/version.txt');
+    const dataVersionResponse = await fetch('./data/version.txt');
     if (dataVersionResponse.ok) {
         document.getElementById('data-version').innerHTML = await dataVersionResponse.text();
     }
 
-    const questsResponse = await fetch('../data/quests.json');
+    const questsResponse = await fetch('./data/quests.json');
     if (!questsResponse.ok) {
         alert("Failed to load quest data. Please try again later.");
     }
