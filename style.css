@@ -92,6 +92,7 @@ table {
     border-collapse: collapse;
     width: 100%;
     background-color: white;
+    margin-bottom: 1.5em;
 }
 
 body.dark table {

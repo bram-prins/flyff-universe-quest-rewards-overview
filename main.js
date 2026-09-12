@@ -5,8 +5,8 @@ let lvlSelector;
 
 init();
 async function init() {
-    await initData();
     initTheme();
+    await initData();
     initHeaders();
     buildTable();
 }
@@ -87,10 +87,11 @@ function initHeaders() {
                 buildTable();
 
                 if (sortBy != null) {
-                    header.style.backgroundColor = 'rgb(0,0,0,0.08)';
+                    const highlightColor = document.body.classList.contains("dark") ? 'rgb(0,0,0,0.25)': 'rgb(0,0,0,0.08)'
+                    header.style.backgroundColor = highlightColor;
                     const cellsInColumn = document.querySelectorAll(`td:nth-child(${i + 1})`);
                     for (let j = 0; j < cellsInColumn.length; j++)
-                        cellsInColumn[j].style.backgroundColor = 'rgb(0,0,0,0.08)';
+                        cellsInColumn[j].style.backgroundColor = highlightColor;
                 } else {
                     header.removeAttribute('style');
                 }
